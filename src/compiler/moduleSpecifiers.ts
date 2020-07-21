@@ -325,7 +325,7 @@ namespace ts.moduleSpecifiers {
 
         let packageName: string | undefined;
         if (!parts && isPnpAvailable()) {
-            const pnpApi = require(`pnpapi`) as any;
+            const pnpApi = require(`pnpapi`);
             const locator = pnpApi.findPackageLocator(moduleFileName);
             // eslint-disable-next-line no-null/no-null
             if (locator !== null) {
@@ -374,20 +374,6 @@ namespace ts.moduleSpecifiers {
             }
         }
 
-        // Simplify the full file path to something that can be resolved by Node.
-
-        // If the module could be imported by a directory name, use that directory's name
-        const moduleSpecifier = packageNameOnly ? moduleFileName : getDirectoryOrExtensionlessFileName(moduleFileName);
-        // If we already know the package name, no need to go further
-        if (packageName !== undefined) {
-            const typelessPackageName = getPackageNameFromTypesPackageName(packageName);
-            return typelessPackageName + moduleSpecifier.substring(parts.packageRootIndex);
-        }
-
-        if (parts.topLevelNodeModulesIndex === undefined || parts.topLevelPackageNameIndex === undefined) {
-            return undefined;
-        }
-
         // If PnP is enabled the node_modules entries we'll get will always be relevant even if they
         // are located in a weird path apparently outside of the source directory
         if (!isPnpAvailable()) {
@@ -401,7 +387,9 @@ namespace ts.moduleSpecifiers {
         }
 
         // If the module was found in @types, get the actual Node package name
-        const nodeModulesDirectoryName = moduleSpecifier.substring(parts.topLevelPackageNameIndex + 1);
+        const nodeModulesDirectoryName = typeof packageName !== `undefined`
+            ? packageName
+            : moduleSpecifier.substring(parts.topLevelPackageNameIndex! + 1);
         const packageNameFromPath = getPackageNameFromTypesPackageName(nodeModulesDirectoryName);
         // For classic resolution, only allow importing from node_modules/@types, not other node_modules
         return getEmitModuleResolutionKind(options) !== ModuleResolutionKind.NodeJs && packageNameFromPath === nodeModulesDirectoryName ? undefined : packageNameFromPath;
