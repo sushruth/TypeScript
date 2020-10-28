@@ -2105,7 +2105,22 @@ namespace ts.server {
         }
 
         updateReferences(refs: readonly ProjectReference[] | undefined) {
-            this.projectReferences = refs;
+            // @ts-ignore
+            if (process.versions.pnp) {
+                const getPnpPath = (path: string) => {
+                    const basePath = this.getCurrentDirectory();
+                    const absolutePath = ts.getNormalizedAbsolutePath(path, basePath);
+                    try {
+                        return require("pnpapi").resolveToUnqualified(require(`${absolutePath}/package.json`).name, `${basePath}/`);
+                    } catch {
+                        // something went wrong with the resolution, try not to fail
+                        return path;
+                    }
+                };
+                this.projectReferences = refs?.map(r => ({...r, path: getPnpPath(r.path)}));
+            } else {
+                this.projectReferences = refs;
+            }
             this.potentialProjectReferences = undefined;
         }
 
