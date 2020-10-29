@@ -2107,7 +2107,7 @@ namespace ts.server {
         updateReferences(refs: readonly ProjectReference[] | undefined) {
             // @ts-ignore
             if (process.versions.pnp) {
-                const pnpApi = require("pnpApi");
+                const pnpApi = require("pnpapi");
                 const basePath = this.getCurrentDirectory();
 
                 const getPnpPath = (path: string) => {
