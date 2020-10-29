@@ -2107,11 +2107,13 @@ namespace ts.server {
         updateReferences(refs: readonly ProjectReference[] | undefined) {
             // @ts-ignore
             if (process.versions.pnp) {
+                const pnpApi = require("pnpApi");
+                const basePath = this.getCurrentDirectory();
+
                 const getPnpPath = (path: string) => {
-                    const basePath = this.getCurrentDirectory();
-                    const absolutePath = ts.getNormalizedAbsolutePath(path, basePath);
                     try {
-                        return require("pnpapi").resolveToUnqualified(require(`${absolutePath}/package.json`).name, `${basePath}/`);
+                        const targetLocator = pnpApi.findPackageLocator(`${path}/`);
+                        return pnpApi.resolveToUnqualified(targetLocator.name, `${basePath}/`);
                     } catch {
                         // something went wrong with the resolution, try not to fail
                         return path;
