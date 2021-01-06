@@ -1353,7 +1353,15 @@ namespace ts {
 
     function loadModuleFromSpecificNodeModulesDirectory(extensions: Extensions, moduleName: string, nodeModulesDirectory: string, nodeModulesDirectoryExists: boolean, state: ModuleResolutionState): Resolved | undefined {
         const candidate = normalizePath(combinePaths(nodeModulesDirectory, moduleName));
+        return loadModuleFromSpecificNodeModulesDirectoryImpl(extensions, moduleName, nodeModulesDirectory, nodeModulesDirectoryExists, state, candidate, undefined, undefined);
+    }
 
+    function loadModuleFromPnpResolution(extensions: Extensions, packageDirectory: string, rest: string, state: ModuleResolutionState): Resolved | undefined {
+        const candidate = normalizePath(combinePaths(packageDirectory, rest));
+        return loadModuleFromSpecificNodeModulesDirectoryImpl(extensions, undefined, undefined, true, state, candidate, rest, packageDirectory);
+    }
+
+    function loadModuleFromSpecificNodeModulesDirectoryImpl(extensions: Extensions, moduleName: string | undefined, nodeModulesDirectory: string | undefined, nodeModulesDirectoryExists: boolean, state: ModuleResolutionState, candidate: string, rest: string | undefined, packageDirectory: string | undefined): Resolved | undefined {
         // First look for a nested package.json, as in `node_modules/foo/bar/package.json`.
         let packageInfo = getPackageJsonInfo(candidate, !nodeModulesDirectoryExists, state);
         if (packageInfo) {
@@ -1387,9 +1395,10 @@ namespace ts {
             return withPackageId(packageInfo, pathAndExtension);
         };
 
-        const { packageName, rest } = parsePackageName(moduleName);
+        let packageName: string;
+        if (rest === undefined) ({ packageName, rest } = parsePackageName(moduleName!));
         if (rest !== "") { // If "rest" is empty, we just did this search above.
-            const packageDirectory = combinePaths(nodeModulesDirectory, packageName);
+            if(packageDirectory === undefined) packageDirectory = combinePaths(nodeModulesDirectory!, packageName!);
 
             // Don't use a "types" or "main" from here because we're not loading the root, but a subdirectory -- just here for the packageId and path mappings.
             packageInfo = getPackageJsonInfo(packageDirectory, !nodeModulesDirectoryExists, state);
@@ -1627,61 +1636,5 @@ namespace ts {
         if (resolved) {
             return toSearchResult(resolved);
         }
-    }
-
-    // Copied from `loadModuleFromSpecificNodeModulesDirectory`
-    function loadModuleFromPnpResolution(extensions: Extensions, packageDirectory: string, rest: string, state: ModuleResolutionState): Resolved | undefined {
-        const nodeModulesDirectoryExists = true;
-        const candidate = normalizePath(combinePaths(packageDirectory, rest));
-
-        // First look for a nested package.json, as in `node_modules/foo/bar/package.json`.
-        let packageInfo = getPackageJsonInfo(candidate, !nodeModulesDirectoryExists, state);
-        if (packageInfo) {
-            const fromFile = loadModuleFromFile(extensions, candidate, !nodeModulesDirectoryExists, state);
-            if (fromFile) {
-                return noPackageId(fromFile);
-            }
-
-            const fromDirectory = loadNodeModuleFromDirectoryWorker(
-                extensions,
-                candidate,
-                !nodeModulesDirectoryExists,
-                state,
-                packageInfo.packageJsonContent,
-                packageInfo.versionPaths
-            );
-            return withPackageId(packageInfo, fromDirectory);
-        }
-
-        const loader: ResolutionKindSpecificLoader = (extensions, candidate, onlyRecordFailures, state) => {
-            const pathAndExtension =
-                loadModuleFromFile(extensions, candidate, onlyRecordFailures, state) ||
-                loadNodeModuleFromDirectoryWorker(
-                    extensions,
-                    candidate,
-                    onlyRecordFailures,
-                    state,
-                    packageInfo && packageInfo.packageJsonContent,
-                    packageInfo && packageInfo.versionPaths
-                );
-            return withPackageId(packageInfo, pathAndExtension);
-        };
-
-        if (rest !== "") { // If "rest" is empty, we just did this search above.
-            // Don't use a "types" or "main" from here because we're not loading the root, but a subdirectory -- just here for the packageId and path mappings.
-            packageInfo = getPackageJsonInfo(packageDirectory, !nodeModulesDirectoryExists, state);
-            if (packageInfo && packageInfo.versionPaths) {
-                if (state.traceEnabled) {
-                    trace(state.host, Diagnostics.package_json_has_a_typesVersions_entry_0_that_matches_compiler_version_1_looking_for_a_pattern_to_match_module_name_2, packageInfo.versionPaths.version, version, rest);
-                }
-                const packageDirectoryExists = nodeModulesDirectoryExists && directoryProbablyExists(packageDirectory, state.host);
-                const fromPaths = tryLoadModuleUsingPaths(extensions, rest, packageDirectory, packageInfo.versionPaths.paths, loader, !packageDirectoryExists, state);
-                if (fromPaths) {
-                    return fromPaths.value;
-                }
-            }
-        }
-
-        return loader(extensions, candidate, !nodeModulesDirectoryExists, state);
     }
 }
