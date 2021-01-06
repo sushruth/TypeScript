@@ -1398,7 +1398,7 @@ namespace ts {
         let packageName: string;
         if (rest === undefined) ({ packageName, rest } = parsePackageName(moduleName!));
         if (rest !== "") { // If "rest" is empty, we just did this search above.
-            if(packageDirectory === undefined) packageDirectory = combinePaths(nodeModulesDirectory!, packageName!);
+            if (packageDirectory === undefined) packageDirectory = combinePaths(nodeModulesDirectory!, packageName!);
 
             // Don't use a "types" or "main" from here because we're not loading the root, but a subdirectory -- just here for the packageId and path mappings.
             packageInfo = getPackageJsonInfo(packageDirectory, !nodeModulesDirectoryExists, state);
