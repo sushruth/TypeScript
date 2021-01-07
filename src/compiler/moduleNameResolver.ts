@@ -277,14 +277,13 @@ namespace ts {
     const nodeModulesAtTypes = combinePaths("node_modules", "@types");
 
     function getPnpTypeRoots(currentDirectory: string) {
-        if (!isPnpAvailable()) {
+        const pnpapi = getPnpApi(currentDirectory);
+        if (!pnpapi) {
             return [];
         }
 
         // Some TS consumers pass relative paths that aren't normalized
         currentDirectory = sys.resolvePath(currentDirectory);
-
-        const pnpapi = getPnpApi();
 
         const currentPackage = pnpapi.findPackageLocator(`${currentDirectory}/`);
         if (!currentPackage) {
@@ -412,7 +411,7 @@ namespace ts {
                 }
                 let result: Resolved | undefined;
                 if (!isExternalModuleNameRelative(typeReferenceDirectiveName)) {
-                    const searchResult = isPnpAvailable()
+                    const searchResult = getPnpApi(initialLocationForSecondaryLookup)
                         ? tryLoadModuleUsingPnpResolution(Extensions.DtsOnly, typeReferenceDirectiveName, initialLocationForSecondaryLookup, moduleResolutionState)
                         : loadModuleFromNearestNodeModulesDirectory(Extensions.DtsOnly, typeReferenceDirectiveName, initialLocationForSecondaryLookup, moduleResolutionState, /*cache*/ undefined, /*redirectedReference*/ undefined);
 
@@ -989,7 +988,7 @@ namespace ts {
                     trace(host, Diagnostics.Loading_module_0_from_node_modules_folder_target_file_type_1, moduleName, Extensions[extensions]);
                 }
 
-                const resolved = isPnpAvailable()
+                const resolved = getPnpApi(containingDirectory)
                     ? tryLoadModuleUsingPnpResolution(extensions, moduleName, containingDirectory, state)
                     : loadModuleFromNearestNodeModulesDirectory(extensions, moduleName, containingDirectory, state, cache, redirectedReference);
 
@@ -1586,18 +1585,18 @@ namespace ts {
      * that the runtime has already been executed).
      * @internal
      */
-    function isPnpAvailable() {
+    function getPnpApi(path: string) {
         // @ts-ignore
-        return process.versions.pnp;
-    }
-
-    function getPnpApi() {
-        return require("pnpapi");
+        const {findPnpApi} = require("module");
+        if (findPnpApi === undefined) {
+            return undefined;
+        }
+        return findPnpApi(`${path}/`);
     }
 
     function loadPnpPackageResolution(packageName: string, containingDirectory: string) {
         try {
-            const resolution = getPnpApi().resolveToUnqualified(packageName, `${containingDirectory}/`, { considerBuiltins: false });
+            const resolution = getPnpApi(containingDirectory).resolveToUnqualified(packageName, `${containingDirectory}/`, { considerBuiltins: false });
             return normalizeSlashes(resolution);
         }
         catch {
