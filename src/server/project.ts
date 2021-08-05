@@ -2234,6 +2234,11 @@ namespace ts.server {
                 const basePath = this.getCurrentDirectory();
 
                 const getPnpPath = (path: string) => {
+                    // When the path is absolute, pnp might resolve it wrongly for any
+                    // file that is present within the `workspace:.` folder.
+                    // So defaulting to using `path` when it is absolute.
+                    if (pathIsAbsolute(path)) return path;
+
                     try {
                         const targetLocator = pnpApi.findPackageLocator(`${path}/`);
                         return pnpApi.resolveToUnqualified(targetLocator.name, `${basePath}/`);
