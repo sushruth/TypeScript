@@ -2241,6 +2241,9 @@ namespace ts.server {
 
                     try {
                         const targetLocator = pnpApi.findPackageLocator(`${path}/`);
+                        // When the target is resolved to root workspace,
+                        // the path may not be virtualized. hence return the original path.
+                        if(targetLocator.reference === "workspace:.") return path;
                         return pnpApi.resolveToUnqualified(targetLocator.name, `${basePath}/`);
                     } catch {
                         // something went wrong with the resolution, try not to fail
