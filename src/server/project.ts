@@ -2234,11 +2234,6 @@ namespace ts.server {
                 const basePath = this.getCurrentDirectory();
                 const fs = require("fs");
                 const getPnpPath = (path: string) => {
-                    // When the path is absolute, pnp might resolve it wrongly for any
-                    // file that is present within the `workspace:.` folder.
-                    // So defaulting to using `path` when it is absolute.
-                    if (fs.existsSync(path) && fs.lstatSync(path).isFile()) return path;
-
                     try {
                         const targetLocator = pnpApi.findPackageLocator(`${path}/`);
                         // When the target is resolved to root workspace,
