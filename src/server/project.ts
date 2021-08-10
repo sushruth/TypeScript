@@ -2232,6 +2232,7 @@ namespace ts.server {
 
                 const pnpApi = require("pnpapi");
                 const basePath = this.getCurrentDirectory();
+
                 const getPnpPath = (path: string) => {
                     try {
                         const targetLocator = pnpApi.findPackageLocator(`${path}/`);
